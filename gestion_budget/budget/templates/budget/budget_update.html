@@ -1,0 +1,50 @@
+
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+  
+<div class="wrapper d-flex flex-column min-vh-100">
+  <header class="header header-sticky p-0 mb-4">
+    {% include 'includes/navbar.html' %}
+    <div class="container-fluid px-4">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb my-0">
+          <li class="breadcrumb-item"><a href="#">Home</a>
+          </li>
+          <li class="breadcrumb-item"><span>Components</span>
+          </li>
+          <li class="breadcrumb-item"><span>Forms</span>
+          </li>
+          <li class="breadcrumb-item active"><span>Form Control</span>
+          </li>
+        </ol>
+      </nav>
+    </div>
+  </header>
+  <div class="body flex-grow-1">
+    <div class="container-lg px-4">
+      {% include 'includes/topbar.html' %}
+      <div class="row">
+        <div class="col-12">
+          <form action="{% url 'budget_update' form.instance.pk %}" method="post">
+            {% csrf_token %}
+            <div class="card mb-4">
+              <div class="card-header"><strong>Form control</strong></div>
+              <div class="card-body">
+                {% include "budget/budget_form.html" %}
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
+                <a class="btn btn-secondary btn-sm" href="{% url 'budget_list' %}">Annuler</a>
+              </div>
+            </div>
+          </form>       
+        </div>
+    </div>
+  </div>
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+{% endblock content %}
+  
+ 

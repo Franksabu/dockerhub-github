@@ -1,0 +1,67 @@
+{% load widget_tweaks %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Fonction pour calculer le prix total
+    function updatePrixTot() {        
+        const prixUnit = parseFloat($('#id_prix_unit').val()) || 0; // Récupérer le prix unitaire
+        const quantite = parseFloat($('#id_quantite').val()) || 0; // Récupérer la quantité
+        const prixTot = prixUnit * quantite; // Calculer le prix total
+        $('#id_prix_tot').val(prixTot.toFixed(2)); // Mettre à jour le champ prix_tot
+
+        if (prixTot > 0) {
+            alert('Le prix total est : ' + prixTot.toFixed(2) + ' €');
+        }
+    }
+    
+    // Écouter les événements keyup sur les champs
+    $('#id_prix_unit, #id_quantite').on('keyup', updatePrixTot); // Appliquer la fonction lors de keyup
+
+});
+</script>
+<div class="row">
+    <div class="col-sm-12 col-md-8 col-lg-8">
+        <div class="mb-3">
+            <i class="text-danger">*</i>
+            {{ form.designation.label_tag }}
+            {% render_field form.designation %}
+        </div>
+    </div>
+    <div class="col-sm-12 col-md-4 col-lg-4">
+        <div class="mb-3">
+            <i class="text-danger">*</i>
+            {{ form.unite_mesure.label_tag }}
+            {% render_field form.unite_mesure %}
+        </div>
+    </div>
+    <div class="col-sm-12 col-md-4 col-lg-4">
+    <div class="mb-3">
+        <i class="text-danger">*</i>
+        {{ form.quantite.label_tag }}
+        {% render_field form.quantite %}
+        {% render_field form.depense %}
+    </div>
+    </div>
+    <div class="col-sm-12 col-md-4 col-lg-4">
+        <div class="mb-3">
+            <i class="text-danger">*</i>
+            {{ form.prix_unit.label_tag }}
+            {% render_field form.prix_unit %}
+        </div>
+    </div>
+    <div class="col-sm-12 col-md-4 col-lg-4">
+        <div class="mb-3">
+            <i class="text-danger">*</i>
+            {{ form.prix_tot.label_tag }}
+            {% render_field form.prix_tot %}
+        </div>
+    </div>
+
+    <div class="col-sm-12 col-md-12 col-lg-12">
+        <div class="mb-3">
+            <i class="text-danger">*</i>
+            {{ form.description.label_tag }}
+            {% render_field form.description %}
+        </div>
+    </div>
+</div>

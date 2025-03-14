@@ -1,0 +1,501 @@
+
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block content %}
+{% block style %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@1.0.0/css/coreui-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@1.0.0/css/flags.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coreui/icons@1.0.0/css/free.min.css">
+ <!-- Inclure les fichiers JS de jsPDF -->
+ <script src = "https://code.jquery.com/jquery-3.6.4.min.js"></script>
+ <script src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.4/jspdf.min.js"></script>
+ <!-- Inclure les fichiers JS de jsPDF de autotable.min.js -->
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+  
+{% endblock %}
+<script>
+  $(document).ready(function() {
+    // $("#dateDebut").click(function(){
+    //   $(this).attr("type","date");
+    // });
+    // $("#dateFin").click(function(){
+    //   $(this).attr("type","date");
+    // });
+
+    // Fonction pour charger une image et la convertir en Base64
+    function urlToBase64(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous'; 
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const dataURL = canvas.toDataURL('image/jpeg'); 
+                resolve(dataURL);
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    }
+
+    // Fonction pour générer le PDF
+    async function generatePDF(dateDebut, dateFin) {          
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    // URL de l'image
+    const imageUrl = "{% static 'assets/img/logoadata.JPG' %}";
+    const logo = await urlToBase64(imageUrl);
+
+    // Ajouter le logo dans l'en-tête
+    doc.addImage(logo, 'JPEG', 40, 20, 100, 100);
+    doc.setFontSize(20); // Paramètre la taille de la police du titre
+    doc.setTextColor(0, 128, 0); // Rouge, par exemple (R, G, B)
+    doc.text("RAPPORT SUR LA BUDGETISATION", 40, 140, { align: 'center' }); // Centrer le texte
+    // Récupérer les données du budget depuis le serveur avec AJAX
+    $.ajax({
+        url: '/data/',
+        method:'GET',
+        data: {
+                dateDebut: dateDebut,
+                dateFin: dateFin,
+                csrfmiddlewaretoken: '{{ csrf_token }}' // Ajoutez votre token CSRF pour la sécurité
+            },
+        success: function(data) {
+            console.log(data);
+            // Préparation des en-têtes et des données pour le tableau Budget
+            const titleRow = [
+               { content: "Liste des Budgets", colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fillColor: [111, 111, 111], textColor: [255, 255, 255] } }
+               ]; 
+            const columns = [
+                { header: 'Désignation', dataKey: 'designation' },
+                { header: 'Description', dataKey: 'description' },
+                { header: 'Montant', dataKey: 'montant' },
+            ];
+
+
+            //const rows = data.budgets || []; // Données récupérées
+            const rows = data.budgets.map(item => ({
+                desigantion: item.description,
+                description: item.description,
+                montant : parseFloat(item.montant),
+            }));
+
+            const totalMontant = rows.reduce((sum, row) => sum + row.montant, 0);
+
+            rows.push([
+                { content: 'TOTAL', colSpan: 2, styles: { halign: 'left',fontStyle: 'bold'} },
+                { content: totalMontant.toFixed(2), styles: { halign: 'left',fontStyle: 'bold'} },
+            ]);
+
+            // Génération du tableau dans le PDF
+            doc.autoTable({
+              head: [titleRow, columns.map(col => col.header)], // Titre dans les en-têtes
+              body: rows.map(row => Array.isArray(row) ? row : Object.values(row)), // Le corps du tableau
+                // head: [columns.map(col => col.header)],
+                // body: rows.map(row => Array.isArray(row) ? row : Object.values(row)),
+                startY: 150,
+                theme: 'grid',
+                headStyles: { fillColor: [111, 111, 111] },
+                styles: { fontSize: 6 }
+            });
+
+                
+            if (data.depenses.length !== 0) {
+              const titleRow2 = [
+                    { content: "Liste des depenses", colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [111, 111, 111] } }
+                ];
+            // // carnet duplicatat 
+              const columns2 = [
+                  { header: 'Designation', dataKey: 'name' },
+                  { header: 'Description', dataKey: 'description' },
+                  { header: 'Numero facture', dataKey: 'numero_facture' },
+                  { header: 'Montant', dataKey: 'montant' },
+                  
+              ];
+              
+              const rows2 = data.depenses.map(item => ({
+                  name: item.name,
+                  description: item.description,
+                  numero_facture: item.numero_facture,
+                  montant: item.montant,
+                  
+              }));
+              
+              const totalDepense = rows2.reduce((sum, row) =>{
+                const montant = parseFloat(row.montant);
+                return sum + (isNaN(montant) ? 0 : montant);
+              }, 0);
+              
+              rows2.push([
+                  { content: 'Total', colSpan: 3, styles: { halign: 'left',fontStyle: 'bold'} },
+                  { content: totalDepense.toFixed(3), styles: { halign: 'left',fontStyle: 'bold'} },
+              ]);
+              
+              
+              doc.autoTable({
+                  head: [titleRow2, columns2.map(col => col.header)], // Titre dans les en-têtes
+                  body: rows2.map(row => Array.isArray(row) ? row : Object.values(row)), // Le corps du tableau
+                  // head: [columns2.map(col => col.header)],
+                  // // body: rows2.map(row => Array.isArray(row) ? row : Object.values(row)),
+                  // body: [titleRow2, ...rows2.map(row => Array.isArray(row) ? row : Object.values(row))],
+                  startY: doc.lastAutoTable.finalY + 10,
+                  theme: 'grid',
+                  headStyles: { fillColor: [111, 111, 111] },
+                  styles: { fontSize: 6 },
+              });
+            }
+            
+            if (data.pertes.length !== 0) {
+
+              const titleRow3 = [
+               { content: "Liste des Pertes", colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fillColor: [111, 111, 111], textColor: [255, 255, 255] } }
+               ];   
+            
+            const columns3 = [
+                { header: 'Designation', dataKey: 'name' },
+                { header: 'Description', dataKey: 'description' },
+                { header: 'Montant', dataKey: 'montant' },
+            ];
+            
+            const rows3 = data.pertes.map(item => ({
+              name: item.name,
+                description: item.description,
+                montant : parseFloat(item.montant),
+            }));
+            
+            const totalPerte = rows3.reduce((sum, row) => sum + row.montant, 0);
+            
+            rows3.push([
+                { content: 'Total', colSpan: 2, styles: { halign: 'left',fontStyle: 'bold'} },
+                { content: totalPerte.toFixed(2), styles: { halign: 'left',fontStyle: 'bold'} },
+            ]);
+            
+          doc.autoTable({
+                head: [titleRow3, columns3.map(col => col.header)], // Titre dans les en-têtes
+                body: rows3.map(row => Array.isArray(row) ? row : Object.values(row)), // Le corps du tableau
+                // head: [columns3.map(col => col.header)],
+                // // body: rows3.map(row => Array.isArray(row) ? row : Object.values(row)),
+                // body: [titleRow3, ...rows3.map(row => Array.isArray(row) ? row : Object.values(row))],
+                startY: doc.lastAutoTable.finalY + 10,
+                theme: 'grid',
+                headStyles: { fillColor: [111, 111, 111] },
+                styles: { fontSize: 6 },
+            });  
+            }
+            // Ajouter le texte après tous les tableaux
+            doc.setTextColor(0, 128, 0); // Par exemple, couleur verte (R, G, B)
+            // // const pageWidth = doc.internal.pageSize.getWidth();            
+            // const text = `Fait par: {{ request.user.first_name }} {{ request.user.last_name }}`;
+            // const pageWidth = doc.internal.pageSize.width;
+            // const textWidth = doc.getTextDimensions(text).width;
+            // const x = (pageWidth - textWidth) / 2; // Centrer le texte
+            // const y = doc.lastAutoTable.finalY + 10; // Positionner juste après le dernier tablea
+            // doc.text(text, x, y);
+             doc.text("Fait par: {{ request.user.first_name }} {{ request.user.last_name }}", 350, doc.lastAutoTable.finalY + 50, { align: 'right' });
+
+            // Sauvegarder le PDF
+            doc.save('rapport.pdf');
+        },
+        error: function(xhr, status, error) {
+            console.error('Error retrieving data:', status, error);
+            alert("Une erreur est survenue lors de la récupération des données.");
+        }
+    });
+    
+    }
+
+    $('#generatePDF').click(function() {
+        // Récupérer les dates sélectionnées
+        const dateDebut = $('#dateDebut').val();
+        const dateFin = $('#dateFin').val();
+        generatePDF(dateDebut, dateFin);
+
+    });
+});
+
+</script>
+
+<div class="wrapper d-flex flex-column min-vh-100">
+     <header class="header header-sticky p-0 mb-4">
+      {% include 'includes/navbar.html' %}
+       <div class="container-fluid px-4">
+         <nav aria-label="breadcrumb">
+           <ol class="breadcrumb my-0">
+             <li class="breadcrumb-item"><a href="#">Home</a>
+             </li>
+             <li class="breadcrumb-item active"><span>Dashboard</span>
+             </li>
+           </ol>
+         </nav>
+       </div>
+     </header>
+     <div class="body flex-grow-1">
+       <div class="container-lg px-4">
+         {% include 'includes/topbar.html' %}
+         <div class="row g-4 mb-4">
+           <div class="col-sm-6 col-xl-3">
+             <div class="card text-white bg-info">
+               <div class="card-body pb-0 d-flex justify-content-between align-items-start">
+                 <div>
+                  <div><h3>Budgets<span class="fs-6 fw-normal">(nombre:{{total_budgets}})</span></h3></div>
+                   <div class="fs-4 fw-semibold"><div></div> <span class="fs-6 fw-normal">Tatal:{{total_montant_budgets}} Fbu
+                       </span></div>                   
+                 </div>
+                 <div class="dropdown">
+                   <button class="btn btn-transparent text-white p-0" type="button" data-coreui-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                     <svg class="icon">
+                       <use xlink:href="vendors/@coreui/icons/svg/free.svg#cil-options"></use>
+                     </svg>
+                   </button>
+                   <div class="dropdown-menu dropdown-menu-end"><a class="dropdown-item" href="#">Action</a><a class="dropdown-item" href="#">Another action</a><a class="dropdown-item" href="#">Something else here</a></div>
+                 </div>
+               </div>
+               <div class="c-chart-wrapper mt-3 mx-3" style="height:70px;">
+                 <canvas class="chart" id="card-chart2" height="70"></canvas>
+               </div>
+             </div>
+           </div>
+           <!-- /.col-->
+           <div class="col-sm-6 col-xl-3">
+             <div class="card text-white bg-warning">
+               <div class="card-body pb-0 d-flex justify-content-between align-items-start">
+                 <div>
+                  <div><h3>Depenses<span class="fs-6 fw-normal">(nombre:{{total_depenses}})</span></h3></div>
+                   <div class="fs-4 fw-semibold"><span class="fs-6 fw-normal">Total:{{total_montant_depenses}} Fbu
+                      </span></div>
+                   
+                 </div>
+                 <div class="dropdown">
+                   <button class="btn btn-transparent text-white p-0" type="button" data-coreui-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                     <svg class="icon">
+                       <use xlink:href="vendors/@coreui/icons/svg/free.svg#cil-options"></use>
+                     </svg>
+                   </button>
+                   <div class="dropdown-menu dropdown-menu-end"><a class="dropdown-item" href="#">Action</a><a class="dropdown-item" href="#">Another action</a><a class="dropdown-item" href="#">Something else here</a></div>
+                 </div>
+               </div>
+               <div class="c-chart-wrapper mt-3" style="height:70px;">
+                 <canvas class="chart" id="card-chart3" height="70"></canvas>
+               </div>
+             </div>
+           </div>
+           <!-- /.col-->
+           <div class="col-sm-6 col-xl-3">
+             <div class="card text-white bg-danger">
+               <div class="card-body pb-0 d-flex justify-content-between align-items-start">
+                 <div>
+                  <div><h3>Pertes<span class="fs-6 fw-normal">(nombre:{{total_pertes}})
+                    </span></h3></div>
+                   <div class="fs-4 fw-semibold"><span class="fs-6 fw-normal">Total:{{total_montant_pertes}} Fbu</span></div>                   
+                 </div>
+                 <div class="dropdown">
+                   <button class="btn btn-transparent text-white p-0" type="button" data-coreui-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                     <svg class="icon">
+                       <use xlink:href="vendors/@coreui/icons/svg/free.svg#cil-options"></use>
+                     </svg>
+                   </button>
+                   <div class="dropdown-menu dropdown-menu-end"><a class="dropdown-item" href="#">Action</a><a class="dropdown-item" href="#">Another action</a><a class="dropdown-item" href="#">Something else here</a></div>
+                 </div>
+               </div>
+               <div class="c-chart-wrapper mt-3 mx-3" style="height:70px;">
+                 <canvas class="chart" id="card-chart4" height="70"></canvas>
+               </div>
+             </div>
+           </div>
+           <!-- /.col-->          
+             <div class="col-sm-6 col-xl-3">
+             <div class="card text-white bg-primary">
+              <div class="card-body pb-0 d-flex justify-content-between align-items-start">
+                <div>
+                  <div><h3>Restes</h3></div>
+                  <div class="fs-4 fw-semibold"><span class="fs-6 fw-normal">Total: {{reste}}</span></div>                 
+                </div>
+                <div class="dropdown">
+                  <button class="btn btn-transparent text-white p-0" type="button" data-coreui-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <svg class="icon">
+                      <use xlink:href="vendors/@coreui/icons/svg/free.svg#cil-options"></use>
+                    </svg>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-end"><a class="dropdown-item" href="#">Action</a><a class="dropdown-item" href="#">Another action</a><a class="dropdown-item" href="#">Something else here</a></div>
+                </div>
+              </div>
+              <div class="c-chart-wrapper mt-3 mx-3" style="height:70px;">
+                <canvas class="chart" id="card-chart1" height="70"></canvas>
+              </div>
+            </div>
+          </div>
+          <!-- /.col-->
+         </div>
+         <!-- /.row-->
+         <div class="card mb-4">
+          <div class="card-body">
+            <form method="POST" action="{% url 'index' %}">
+              {% csrf_token %}
+            <div class="row">
+             <div class="col-sm-12 col-md-3 col-lg-3">
+               <div class="mb-3">
+                 <!-- <label class="form-label" for="dateDebut">Du</label> -->
+                 <input class="form-control" id="dateDebut" name="dateDebut" type="date" >
+               </div>
+             </div>
+             <div class="col-sm-12 col-md-3 col-lg-3">
+              <div class="mb-3">
+                <!-- <label class="form-label" for="dateFin">Au</label> -->
+                <input class="form-control" id="dateFin" name="dateFin" type="date">
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="mb-4">                
+                <button class="form-control btn btn-sm btn-primary" id="searchButton" type="submit">
+                  <i class="icon cib-elastic-search"></i>rechercher
+                </button>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="mb-4">               
+                <!-- <a class="form-control btn btn-sm btn-success" id="generatePDF1">Imprimer tout</a> -->
+                <a class="form-control btn btn-sm btn-success" id="generatePDF">Imprimer</a>
+              </div>
+            </div>
+            </div>
+            <!-- Hidden inputs to store dates -->
+            <input type="hidden" id="hiddenDateDebut" name="hiddenDateDebut" />
+            <input type="hidden" id="hiddenDateFin" name="hiddenDateFin" />
+            </form>
+          </div>
+         </div>
+         
+          <div class="printable-area">
+            <div class="row g-4 mb-4">
+              <div class="col-12">
+               <div class="card mb-4">
+                 <div class="card-header">
+                     <strong>Budget </strong>
+                 </div>
+                 <div class="card-body overflow-auto"> 
+                   <table class="table table-striped table-hover">
+                     <thead>
+                       <tr>
+                         <th scope="col">No</th>
+                         <th scope="col">Designation</th>
+                         <th scope="col">Description</th>
+                         <th scope="col">Montant</th>                      
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {% for row in budgets %}
+                       <tr>
+                       <th scope="row">{{forloop.counter}}</th>
+                         <td>{{row.designation}}</td>
+                         <td>{{row.description}}</td>
+                         <td>{{row.montant}}</td>
+                         
+                       </tr>
+                       {% empty %}
+                       <tr>
+                         <td class="text-center" colspan="5">Aucun enregistrement</td>
+                       </tr>
+                       {% endfor %}
+                     </tbody>
+                      <tfooter>
+                        <tr>
+                         <td colspan="3"><strong>Total</strong></td>
+                         <td>{{total_montant_budget}}</td>
+                       </tr>
+                      </tfooter>
+                   </table>
+                 </div>
+               </div>
+              </div>
+              <div class="col-12">
+               <div class="card mb-4">
+                 <div class="card-header">
+                     <strong>Depenses </strong>
+                 </div>
+                 <div class="card-body overflow-auto"> 
+                   <table class="table table-striped table-hover">
+                     <thead>
+                       <tr>
+                         <th scope="col">No</th>
+                         <th scope="col">Designation</th>                      
+                         <th scope="col">Numero facture</th>
+                         <th scope="col">Montant</th>
+                        
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {% for row in depenses %}
+                       <tr>
+                       <th scope="row">{{forloop.counter}}</th>
+                         <td>{{row.name}}</td>
+                         <td>{{row.numero_facture}}</td>
+                         <td>{{row.montant}}</td>
+                       </tr>
+                       {% empty %}
+                       <tr>
+                         <td class="text-center" colspan="5">Aucun enregistrement</td>
+                       </tr>
+                       {% endfor %}
+                     </tbody>
+                     <tfooter>
+                       <tr>
+                        <td colspan="3"><strong>Total</strong></td>
+                        <td>{{total_montant_depense}}</td>
+                      </tr>
+                     </tfooter>
+                   </table>
+                 </div>
+               </div>
+              </div>
+              <div class="col-12">
+               <div class="card mb-4">
+                 <div class="card-header">
+                     <strong>Pertes </strong>
+                 </div>
+                 <div class="card-body overflow-auto"> 
+                   <table class="table table-striped table-hover">
+                     <thead>
+                       <tr>
+                         <th scope="col">No</th>
+                         <th scope="col">Designation</th>
+                         <th scope="col">Description</th>
+                         <th scope="col">Montant</th>                      
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {% for row in pertes %}
+                       <tr>
+                       <th scope="row">{{forloop.counter}}</th>
+                         <td>{{row.name}}</td>
+                         <td>{{row.description}}</td>
+                         <td>{{row.montant}}</td>
+                         
+                       </tr>
+                       {% empty %}
+                       <tr>
+                         <td class="text-center" colspan="5">Aucun enregistrement</td>
+                       </tr>
+                       {% endfor %}
+                     </tbody>
+                      <tfooter>
+                        <tr>
+                         <td colspan="3"><strong>Total</strong></td>
+                         <td>{{total_montant_perte}}</td>
+                       </tr>
+                      </tfooter>
+                   </table>
+                 </div>
+               </div>
+              </div>
+            </div>
+          </div>      
+
+       </div>
+     </div>
+     {% include "includes/footer.html" %}
+   </div>
+   {% endblock content %}+
+ 

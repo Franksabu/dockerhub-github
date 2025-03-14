@@ -1,0 +1,22 @@
+{% load widget_tweaks %}
+<div class="row">
+
+    <div class="col-sm-12 col-md-6 col-lg-6">
+        <div class="mb-3">           
+            <i class="text-danger">*</i>
+            {{ form.code.label_tag }}
+            {% render_field form.code %}
+            <small class="form-text text-muted">Entrez un code unique.</small>
+        </div>
+    </div>
+
+    <div class="col-sm-12 col-md-6 col-lg-6">
+        <div class="mb-3">
+           <i class="text-danger">*</i>
+           {{ form.nom.label_tag }}
+           {% render_field form.nom %}
+           <small class="form-text text-muted">Veuillez entrer votre nom complet du code.</small>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,93 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+  
+<div class="wrapper d-flex flex-column min-vh-100">
+  <header class="header header-sticky p-0 mb-4">
+    {% include 'includes/navbar.html' %}
+    <div class="container-fluid px-4">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb my-0">
+          <li class="breadcrumb-item"><a href="#">Home</a>
+          </li>
+          <li class="breadcrumb-item"><span>Components</span>
+          </li>
+          <li class="breadcrumb-item"><span>Base</span>
+          </li>
+          <li class="breadcrumb-item active"><span>Tables</span>
+          </li>
+        </ol>
+      </nav>
+    </div>
+  </header>
+  <div class="body flex-grow-1">
+    <div class="container-fluid px-4">
+      {% include 'includes/topbar.html' %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <strong>Tables</strong><span class="small ms-1">Striped rows</span>
+          <a href="{% url 'depense_list' %}" class="btn btn-sm btn-secondary mb-2 me-2" style="float: right;">Retour a la list</a>
+          <a href="{% url 'detail_depense_view' depense.id %}" class="btn btn-sm btn-primary mb-2 me-2" style="float: right;">Nouveau detail depense</a>
+        </div>
+        <div class="card-body"> 
+          <div class="example">
+            <ul class="nav nav-underline-border" role="tablist">
+              <li class="nav-item"><a class="nav-link active" data-coreui-toggle="tab" href="#preview-1003" role="tab">
+                  <svg class="icon me-2">
+                    <use xlink:href="node_modules/@coreui/icons/sprites/free.svg#cil-media-play"></use>
+                  </svg>Preview</a></li>
+              <li class="nav-item"><a class="nav-link" href="https://coreui.io/docs/content/tables/#striped-rows" target="_blank">
+                  <svg class="icon me-2">
+                    <use xlink:href="node_modules/@coreui/icons/sprites/free.svg#cil-code"></use>
+                  </svg>Code</a></li>
+            </ul>
+            <div class="tab-content rounded-bottom">
+              <div class="tab-pane p-3 active preview" role="tabpanel" id="preview-1003">
+                <table class="table table-striped table-hover">
+                  <thead>
+                    <tr>
+                      <th scope="col">No</th>
+                      <th scope="col">Designation</th>
+                      <th scope="col">Quantite</th>
+                      <th scope="col">Prix unitaire</th>
+                      <th scope="col">Prix total</th>
+                      <th scope="col">Unite de mesure</th>
+                      <th scope="col">Description</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in detail_depense %}
+                    <tr>
+                    <th scope="row">{{forloop.counter}}</th>                    
+                      <td>{{row.designation}}</td>
+                      <td>{{row.quantite}}</td>
+                      <td>{{row.prix_unit}}</td>
+                      <td>{{row.prix_tot}}</td>                 
+                      <td>{{row.unite_mesure}}</td>
+                      <td>{{row.description}}</td> 
+                      <td class="d-flex justify-content-start">                        
+                        <a class="btn btn-sm btn-outline-primary mb-2 me-2" href="{% url 'detail_depense_update' depense.id row.id %}"><i class="fa fa-check"></i>modifier</a>
+                         <a class="btn btn-sm btn-outline-danger mb-2" href="{% url 'detail_depense_delete' depense.id row.id %}"><i class="fa fa-check"></i>supprimer</a> 
+                      </td>                     
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td class="text-center" colspan="8">Aucun enregistrement</td>
+                    </tr>
+                    {% endfor %}                    
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>   
+        </div>
+      </div>
+    </div>
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+{% endblock content %}
+  
+
+    
